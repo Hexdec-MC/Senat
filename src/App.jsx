@@ -93,8 +93,8 @@ const PM_TYPES = ['PM1', 'PM2', 'PM3', 'PM4'];
 
 const DUMMY_AUTH_DB = [
     { id: 'admin1', username: 'admin', role: 'Administrador', password: '123' },
-    { id: 'inst1', username: 'instructor', role: 'Instructor', password: '456' },
-    { id: 'student1', username: 'estudiante', role: 'Estudiante', password: '789' },
+    { id: 'inst1', username: 'Usuario', role: 'Usuario', password: '456' },
+    { id: 'student1', username: 'Visor', role: 'Visor', password: '789' },
 ];
 
 const DUMMY_MACHINES = [
@@ -441,7 +441,7 @@ const LoginScreen = ({ onLogin }) => {
     const [username, setUsername] = useState(''); 
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const handleLogin = (e) => { e.preventDefault(); const user = DUMMY_AUTH_DB.find(u => u.username === username && u.password === password); if (user) onLogin(user); else setError('Credenciales inválidas. Prueba admin/123'); };
+    const handleLogin = (e) => { e.preventDefault(); const user = DUMMY_AUTH_DB.find(u => u.username === username && u.password === password); if (user) onLogin(user); else setError(''); };
     return (
         <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-4 print:hidden">
             <div className="bg-white rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden max-w-4xl w-full transform transition-all">
@@ -490,8 +490,8 @@ const MachineManagementSection = ({ userId, machines, showMessage, userRole }) =
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     const canEdit = userRole === 'Administrador';
-    const canCreate = userRole === 'Administrador' || userRole === 'Instructor'; 
-    const canRefuel = userRole === 'Administrador' || userRole === 'Instructor';
+    const canCreate = userRole === 'Administrador' || userRole === 'Usuario'; 
+    const canRefuel = userRole === 'Administrador' || userRole === 'Usuario';
 
     const openModal = (machine = null) => { setEditingMachine(machine); if (machine) { const seqIdx = machine.next_pm_sequence_index !== undefined ? machine.next_pm_sequence_index : getRecommendedSequenceIndex(machine.current_hm); setFormData({ name: machine.name, model: machine.model, plate: machine.plate || '', current_hm: machine.current_hm, next_pm_sequence_index: seqIdx, fuel_level: machine.fuel_level || 100, image_type: machine.image_type || 'preset', image_src: machine.image_src || 'excavator' }); } else { setFormData({ name: '', model: '', plate: '', current_hm: '', next_pm_sequence_index: 0, fuel_level: 100, image_type: 'preset', image_src: 'excavator' }); } setModalOpen(true); };
     const openRefuelModal = (machine) => { setSelectedMachineForRefuel(machine); setRefuelLevel(machine.fuel_level || 0); setRefuelModalOpen(true); };
@@ -572,14 +572,14 @@ const MachineManagementSection = ({ userId, machines, showMessage, userRole }) =
 const UserManagementSection = ({ userId, users, showMessage, userRole }) => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-    const [formData, setFormData] = useState({ username: '', password: '', role: 'Instructor' });
+    const [formData, setFormData] = useState({ username: '', password: '', role: 'Usuario' });
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     const canEdit = userRole === 'Administrador';
 
     const handleSave = async (e) => { e.preventDefault(); const ref = getCollectionRef('users_list', userId); try { if (editingUser) { await updateDoc(doc(ref, editingUser.id), formData); showMessage('Usuario actualizado', 'success'); } else { await addDoc(ref, { ...formData, createdAt: serverTimestamp() }); showMessage('Usuario creado', 'success'); } setModalOpen(false); } catch (error) { showMessage('Error al guardar', 'error'); } };
     const confirmDelete = async () => { if (!confirmDeleteId) return; try { await deleteDoc(doc(getCollectionRef('users_list', userId), confirmDeleteId)); showMessage('Usuario eliminado', 'success'); } catch (error) { showMessage('Error al eliminar', 'error'); } finally { setConfirmDeleteId(null); } };
-    const openModal = (user = null) => { setEditingUser(user); setFormData(user ? { username: user.username, password: user.password, role: user.role } : { username: '', password: '', role: 'Instructor' }); setModalOpen(true); };
+    const openModal = (user = null) => { setEditingUser(user); setFormData(user ? { username: user.username, password: user.password, role: user.role } : { username: '', password: '', role: 'Usuario' }); setModalOpen(true); };
 
     return (
         <div className="space-y-6 pb-24 md:pb-0">
@@ -593,7 +593,7 @@ const UserManagementSection = ({ userId, users, showMessage, userRole }) => {
                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{users.map(u => (<div key={u.id} className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-indigo-500 flex justify-between items-center"><div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-md ${u.role === 'Administrador' ? 'bg-purple-600' : 'bg-blue-500'}`}>{u.username[0].toUpperCase()}</div><div><h4 className="font-bold text-gray-800">{u.username}</h4><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md border border-gray-200">{u.role}</span></div></div>{canEdit && <div className="flex gap-1"><button onClick={() => openModal(u)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition active:scale-95"><Edit2 className="w-5 h-5"/></button><button onClick={() => setConfirmDeleteId(u.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95"><Trash2 className="w-5 h-5"/></button></div>}</div>))}</div>
-            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingUser ? "Editar Usuario" : "Nuevo Usuario"}><form onSubmit={handleSave} className="space-y-5"><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Usuario</label><input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 focus:bg-white transition" /></div><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Contraseña</label><input required type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 focus:bg-white transition" /></div><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Rol</label><select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base bg-white focus:ring-2 focus:ring-indigo-500 outline-none"><option value="Instructor">Instructor</option><option value="Administrador">Administrador</option><option value="Estudiante">Estudiante</option></select></div><div className="pt-4 flex justify-end"><button type="submit" className="w-full md:w-auto bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition active:scale-95">Guardar</button></div></form></Modal>
+            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingUser ? "Editar Usuario" : "Nuevo Usuario"}><form onSubmit={handleSave} className="space-y-5"><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Usuario</label><input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 focus:bg-white transition" /></div><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Contraseña</label><input required type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 focus:bg-white transition" /></div><div><label className="block text-sm font-bold mb-1.5 text-gray-700">Rol</label><select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full border border-gray-200 p-3 rounded-xl text-base bg-white focus:ring-2 focus:ring-indigo-500 outline-none"><option value="Usuario">Usuario</option><option value="Administrador">Administrador</option><option value="Visor">Visor</option></select></div><div className="pt-4 flex justify-end"><button type="submit" className="w-full md:w-auto bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition active:scale-95">Guardar</button></div></form></Modal>
         </div>
     );
 };
@@ -609,8 +609,8 @@ const InventorySection = ({ userId, supplies, showMessage, userRole }) => {
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     // Permission Logic
-    const canCreate = userRole === 'Administrador' || userRole === 'Instructor';
-    const canRestock = userRole === 'Administrador' || userRole === 'Instructor';
+    const canCreate = userRole === 'Administrador' || userRole === 'Usuario';
+    const canRestock = userRole === 'Administrador' || userRole === 'Usuario';
     const canEditDelete = userRole === 'Administrador';
 
     const filteredSupplies = supplies.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
@@ -729,7 +729,7 @@ const MaintenanceSection = ({ userId, machines, supplies, history, pmConfigs, sh
     const currentPmConfig = pmConfigs[selectedPmType] || [];
 
     // Permissions
-    const canRegister = userRole === 'Administrador' || userRole === 'Instructor';
+    const canRegister = userRole === 'Administrador' || userRole === 'Usuario';
     const canManageKits = userRole === 'Administrador';
 
     // Funciones Kits
@@ -1133,7 +1133,7 @@ const MachineUsageSection = ({ userId, userName, machines, currentJob, setCurren
     const [endFuel, setEndFuel] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
 
-    const canOperate = userRole === 'Administrador' || userRole === 'Instructor';
+    const canOperate = userRole === 'Administrador' || userRole === 'Usuario';
 
     const startJob = async (machine) => {
         if (!canOperate) return showMessage('No tienes permisos para operar', 'error');
@@ -1317,7 +1317,7 @@ export default function App() {
         { id: 'inventory', label: 'Inventario', icon: Package },
     ];
 
-    if (user?.role === 'Administrador' || user?.role === 'Instructor') navItems.push({ id: 'users', label: 'Usuarios', icon: Users });
+    if (user?.role === 'Administrador' || user?.role === 'Usuario') navItems.push({ id: 'users', label: 'Usuarios', icon: Users });
 
     if (!authReady) return <Loader />;
     if (!user) return <LoginScreen onLogin={setUser} />;
